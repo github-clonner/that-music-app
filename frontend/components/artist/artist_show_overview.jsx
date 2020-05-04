@@ -1,7 +1,14 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { fetchArtist } from '../../actions/artist_actions';
-import {fetchCurrentSong, receivePlay, receiveSongQueue, receiveClickedSongId, createLikeSong, createPlaylistSong} from '../../actions/song_actions';
+import {
+  fetchCurrentSong, 
+  receivePlay, 
+  receiveSongQueue, 
+  receiveClickedSongId, 
+  createLikeSong, 
+  createPlaylistSong,
+  receiveCurrentSongLikeStatus } from '../../actions/song_actions';
 import {receiveDropdownControl} from '../../actions/dropdown_actions';
 import {fetchCurrentPlaylists} from '../../actions/playlist_actions';
 import { Link } from 'react-router-dom';
@@ -35,13 +42,13 @@ class ArtistOverview extends React.Component {
     };
   }
 
-  toggleMenu(id, playlistSongId) {
+  toggleMenu(id, songId) {
     let that = this;
     return e => {
       e.stopPropagation();
       if(that.toggle) {
         that.toggle.handleContextClick(e);
-        that.props.receiveClickedSongId(id, playlistSongId);
+        that.props.receiveClickedSongId(id, songId);
       }
     }
   }
@@ -59,17 +66,19 @@ class ArtistOverview extends React.Component {
   handleClick(song) {
     let that = this;
     return (e) => {
-      if (that.props.playing) {
-        that.props.receivePlay(false, true);
-      } else if (song.id !== that.props.currentSong.id) {
+      // if (that.props.playing) {
+      //   that.props.receivePlay(false, true);
+      // } else 
+      
+      if (song.id !== that.props.currentSong.id) {
         that.props.fetchCurrentSong(that.props.currentUserId, song.id);
-        that.props.receivePlay(true, false);
+        that.props.receivePlay(true, false, song.title);
         if (that.props.songQueue[0] !== Object.values(that.props.songs)[0]) {
           that.props.receiveSongQueue(Object.values(that.props.songs).map(song => song.id));
         }
         that.props.createCurrentlyVisited(that.props.currentUserId, that.props.artistId, 'artist', that.props.artist.name, null, that.props.artist.thumbImageUrl, null);
       } else {
-        that.props.receivePlay(true, false);
+        that.props.receivePlay(true, false, song.title);
       }
     };
   }
@@ -77,11 +86,13 @@ class ArtistOverview extends React.Component {
 
 
   componentDidUpdate() {
-
     if(this.state.actionPlaylist === 'Save to your Favorite Songs') {
       this.props.createLikeSong(this.props.currentUserId, this.props.clickedSongId.id);
-    }
-
+      if (this.props.currentSong && this.props.clickedSongId.id === this.props.currentSong.id) {
+        this.props.receiveCurrentSongLikeStatus(true);
+      }
+      this.setState({actionPlaylist: false});
+    } 
   }
 
   handleButtonClick(id) {
@@ -186,7 +197,9 @@ class ArtistOverview extends React.Component {
           return (
             <div key={idx} className="cover-container">
               <div key={idx} className="browse-featured-playlist">
-                <img src={album.imageUrl} style={Object.values(this.props.albums).length === 1 ? oneAlbumSize : null}/>
+                <Link to={`/app/album/${album.id}`} className="cover-art-text">
+                  <img src={album.imageUrl} style={Object.values(this.props.albums).length === 1 ? oneAlbumSize : null}/>
+                </Link>
                 <div className="mo-info" >
                   <Link to={`/app/album/${album.id}`} className="cover-art-text">{album.title}</Link>
                 </div>
@@ -275,7 +288,7 @@ class ArtistOverview extends React.Component {
           <li key={idx}
             ref={songRow => this.songRow = songRow}
             className="track-list-row fewer-padding"
-            onClick={this.handleClick(song)}
+            onDoubleClick={this.handleClick(song)}
             onMouseEnter={this.handleMouseEnter(idx)}
             onMouseLeave={this.handleMouseLeave.bind(this)}>
 
@@ -346,7 +359,7 @@ class ArtistOverview extends React.Component {
             <MenuItem data={{foo: 'Add to Playlist'}} onClick={this.handleContextMenuClick.bind(this)}>
               Add to Playlist
             </MenuItem>
-            <MenuItem data={{foo: 'Save to your Favorite Songs'}} onClick={this.handleContextMenuClick.bind(this)}>
+            <MenuItem data={{foo: this.props.clickedSongId && this.props.currentUser.likeSongIds.includes(this.props.clickedSongId.id) ? '' : 'Save to your Favorite Songs'}} onClick={this.handleContextMenuClick.bind(this)}>
               Save to your Favorite Songs
             </MenuItem>
           </ContextMenu>
@@ -381,6 +394,7 @@ const mapStateToProps = (state, {match})=> {
     currentSong: state.currentSong.song,
     songs: state.entities.songs,
     currentUserId: state.session.currentUserId,
+    currentUser: state.entities.users[state.session.currentUserId],
     playing: state.playStatus.playing,
     pause: state.playStatus.pause,
     songQueue: state.songQueue,
@@ -395,7 +409,7 @@ const mapDispatchToProps = dispatch => {
   return {
     fetchArtist: id => dispatch(fetchArtist(id)),
     fetchCurrentSong: (currentUserId, id) => dispatch(fetchCurrentSong(currentUserId, id)),
-    receivePlay: (playing, pause) => dispatch(receivePlay(playing, pause)),
+    receivePlay: (playing, pause, requestedSong) => dispatch(receivePlay(playing, pause, requestedSong)),
     receiveSongQueue: songQueue => dispatch(receiveSongQueue(songQueue)),
     receiveDropdownControl: pressed => dispatch(receiveDropdownControl(pressed)),
     fetchCurrentPlaylists: id => dispatch(fetchCurrentPlaylists(id)),
@@ -403,7 +417,8 @@ const mapDispatchToProps = dispatch => {
     createPlaylistSong: (playlist_id, song_id) => dispatch(createPlaylistSong(playlist_id, song_id)),
     createLikeSong: (userId, songId) => dispatch(createLikeSong(userId, songId)),
     receiveCurrentPlayingPage: (id, type, title) => dispatch(receiveCurrentPlayingPage(id, type, title)),
-    createCurrentlyVisited: (user_id, table_id, table, title, imageUrl, thumbImage, coverImage) => dispatch(createCurrentlyVisited(user_id, table_id, table, title, imageUrl, thumbImage, coverImage))
+    createCurrentlyVisited: (user_id, table_id, table, title, imageUrl, thumbImage, coverImage) => dispatch(createCurrentlyVisited(user_id, table_id, table, title, imageUrl, thumbImage, coverImage)),
+    receiveCurrentSongLikeStatus: likeStatus => dispatch(receiveCurrentSongLikeStatus(likeStatus))
   };
 };
 

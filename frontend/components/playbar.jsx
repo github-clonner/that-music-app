@@ -5,6 +5,7 @@ import {merge} from 'lodash';
 export default class Playbar extends React.Component {
   constructor(props) {
     super(props);
+    // this.currentSongIsLiked = this.props.currentSong.song ? this.props.currentUser.likeSongIds.includes(parseInt(this.props.currentSong.song.id)) : false;
     this.state = {
       mouseHeartOver: false,
       mouseShuffleOver: false,
@@ -19,7 +20,8 @@ export default class Playbar extends React.Component {
       pause: this.props.pause,
       currentTime: null,
       duration: null,
-    }
+      included: this.props.currentSong.song ? this.props.currentUser.likeSongIds.includes(parseInt(this.props.currentSong.song.id)) : false
+    };
     // this.timeline = React.createRef();
     // this.slider = React.createRef();
 
@@ -43,24 +45,38 @@ export default class Playbar extends React.Component {
     this.formerPlayStatus = false;
   }
 
+  handleLikeSongClick() {
+    if (this.props.currentSongLikeStatus) {
+      let likeSongId = this.props.currentUser.likeSongs.filter(song => song.song_id === parseInt(this.props.currentSong.song.id))[0].id;
+      this.props.deleteLikeSong(likeSongId).then(() => {
+        if (this.props.location.pathname === "/app/collection/tracks") {
+          this.props.fetchLikeSongs(this.props.currentUserId);
+        }
+      });
+      this.props.receiveCurrentSongLikeStatus(false);
+    } else {
+      this.props.createLikeSong(this.props.currentUserId, this.props.currentSong.song.id).then(() => {
+        if (this.props.location.pathname === "/app/collection/tracks") {
+          this.props.fetchLikeSongs(this.props.currentUserId);
+        }
+      });
+      this.props.receiveCurrentSongLikeStatus(true);
+    }
+  }
+
   handleMouseOver(field) {
     return () => this.setState({[field]: !this.state[field]});
   }
 
   handleClick() {
-    if(this.props.pause) {
-      this.props.receivePlay(true, false);
-    } else if (this.props.playing) {
-      this.props.receivePlay(false, true);
+    if (this.props.currentSong.song) {
+      
+      if(this.props.pause) {
+        this.props.receivePlay(true, false, this.props.currentSong.song.title);
+      } else if (this.props.playing) {
+        this.props.receivePlay(false, true, this.props.currentSong.song.title);
+      }
     }
-  }
-
-  onPlaying() {
-    this.setState({playing: true, pause: false});
-  }
-
-  onPause() {
-    this.setState({playing: false, pause: true});
   }
 
   handleRepeat() {
@@ -145,7 +161,7 @@ export default class Playbar extends React.Component {
     if (this.props.shuffle && !this.compare(this.formerSongQueue, this.props.songQueue)) {
       this.formerSongQueue = Object.assign([], this.props.songQueue);
       let newQueue = Object.assign([], this.props.songQueue);
-      newQueue = this.shuffle(newQueue);
+      newQueue = this.shuffle(newQueue);   
       this.props.receiveShuffleSongQueue(newQueue);
     }
 
@@ -156,29 +172,44 @@ export default class Playbar extends React.Component {
     }
 
     if (this.props.currentSong.song && this.formerSong.song && this.formerSong.song.id !== this.props.currentSong.song.id && this.props.playing) {
+      
+      this.formerPlayStatus = false;
+      this.pauseAudio();
+      window.audio.removeEventListener('loadedmetadata', this.playAudio);
       this.formerSong = merge({}, this.props.currentSong);
-      // this.props.receivePlay(false, true);
+      this.props.receiveCurrentSongLikeStatus(this.props.currentUser.likeSongIds.includes(parseInt(this.props.currentSong.song.id)));
       window.audio.src = this.props.currentSong.song.songUrl;
-      this.playAudio();
+      window.audio.addEventListener('loadedmetadata', this.playAudio);
     }
 
+
     if (this.props.currentSong.song && !this.formerSong.song) {
+      
       this.formerSong = merge({}, this.props.currentSong);
       window.audio.src = this.props.currentSong.song.songUrl;
-      this.playAudio();
+      window.audio.addEventListener('loadedmetadata', this.playAudio);
     }
 
     if (!this.props.shuffle && this.props.shuffleSongQueue.length !== 0) {
       this.props.receiveShuffleSongQueue([]);
     }
 
-    if (this.props.playing && !this.formerPlayStatus) {
+    // if (this.props.playing && !this.formerPlayStatus) {
+    //   this.formerPlayStatus = true;
+    //   this.playAudio();
+    // } else if (!this.props.playing && this.formerPlayStatus) {
+    //   this.formerPlayStatus = false;
+    //   this.pauseAudio();
+    // }
+
+    if (this.props.currentSong.song && this.props.playing && this.props.requestedSong === this.props.currentSong.song.title && !this.formerPlayStatus) {
+      
       this.formerPlayStatus = true;
       this.playAudio();
-    } else if (!this.props.playing && this.formerPlayStatus) {
+    } else if (this.props.currentSong.song && !this.props.playing && this.props.requestedSong === this.props.currentSong.song.title && this.formerPlayStatus) {
       this.formerPlayStatus = false;
       this.pauseAudio();
-    }
+    } 
   }
 
   handleAudioLoop() {
@@ -190,41 +221,46 @@ export default class Playbar extends React.Component {
   }
 
   playAudio() {
+    
     let isPlaying = window.audio.currentTime > 0 && !audio.paused && !audio.ended && audio.readyState > 2;
     if (!isPlaying) {
-      this.props.receivePlay(true, false);
-      window.audio.play().then( () => {
-        console.log('PLAY');
-        window.audio.addEventListener("timeupdate", this.handleAudioUpdate);
-        if (this.props.pause) {
-          this.pauseAudio();
-        }
-      });
+      // this.props.receivePlay(true, false);
+      let playPromise = window.audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          window.audio.addEventListener("timeupdate", this.handleAudioUpdate);
+        }).catch( err => err);
+      }
     }
   }
 
   pauseAudio() {
-    this.props.receivePlay(false, true);
+    // this.props.receivePlay(false, true);
     window.audio.pause();
     window.audio.removeEventListener("timeupdate", this.handleAudioUpdate);
   }
 
   handleAudioClose() {
     window.audio.currentTime === 0;
-
   }
 
 
   componentDidMount() {
-
     window.audio = document.getElementById('root-audio');
-    window.audio.src = Object.values(this.props.currentSong).length !== 0 ? this.props.currentSong.song.songUrl: "";
+    
     if (this.props.currentSong.song && this.props.currentSong.song.id) {
-
       this.props.receiveSongQueue([this.props.currentSong.song.id]);
       this.props.receiveShuffleSongQueue([]);
+      this.props.receiveCurrentSongLikeStatus(this.props.currentSong.song ? this.props.currentUser.likeSongIds.includes(parseInt(this.props.currentSong.song.id)) : false);
+      window.audio.src = this.props.currentSong.song.songUrl
     }
-    // window.audio.addEventListener("timeupdate", this.handleAudioUpdate);
+  }
+
+  componentWillUnmount() {
+    this.pauseAudio();
+    window.audio.removeEventListener('loadedmetadata', this.playAudio);
+    window.audio.src = "";
   }
 
   handleSongQueue() {
@@ -236,7 +272,6 @@ export default class Playbar extends React.Component {
       this.props.history.push('/app/songQueue');
       this.props.receiveSongQueueClick(true);
     }
-    // this.setState({songQueueClick: !this.state.songQueueClick});
   }
 
   handleAudioUpdate() {
@@ -247,15 +282,10 @@ export default class Playbar extends React.Component {
     let durationSecond = Math.round(window.audio.duration % 60).toString().length < 2 ? '0' + Math.round(window.audio.duration % 60).toString() : Math.round(window.audio.duration % 60).toString();
     let durationMinute = Math.round(window.audio.duration / 60);
 
-    this.setState({currentTime: `${currentMinute}:${currentSecond === '60' ? '00' : currentSecond}`, duration: `${durationMinute}:${durationSecond}`});
     this.positionHandle(position);
     this.playNextSong();
+    this.setState({currentTime: `${currentMinute}:${currentSecond === '60' ? '00' : currentSecond}`, duration: `${durationMinute}:${durationSecond}`});
   }
-
-  // componentWillUnmount() {
-  //   window.audio.removeEventListener("timeupdate", this.handleAudioUpdate);
-  // }
-
 
   playNextSong() {
     let nextSongIdx;
@@ -265,17 +295,21 @@ export default class Playbar extends React.Component {
       nextSongIdx = songQueue.indexOf(this.props.currentSong.song.id) + 1;
       if (nextSongIdx < songQueue.length) {
         this.pauseAudio();
+        window.audio.removeEventListener('loadedmetadata', this.playAudio);
         this.props.fetchCurrentSong(this.props.currentUserId, songQueue[nextSongIdx]).then( () => {
           window.audio.src = this.props.currentSong.song.songUrl;
-          this.playAudio();
+          window.audio.addEventListener('loadedmetadata', this.playAudio);
+          // this.playAudio();
         });
       } else {
         if (this.props.repeat) {
           nextSongIdx = nextSongIdx - songQueue.length;
           this.pauseAudio();
+          window.audio.removeEventListener('loadedmetadata', this.playAudio);
           this.props.fetchCurrentSong(this.props.currentUserId, songQueue[nextSongIdx]).then( () => {
             window.audio.src = this.props.currentSong.song.songUrl;
-              this.playAudio();
+            window.audio.addEventListener('loadedmetadata', this.playAudio);
+            // this.playAudio();
           });
         }
       }
@@ -288,13 +322,15 @@ export default class Playbar extends React.Component {
     prevSongIdx = songQueue.indexOf(this.props.currentSong.song.id) - 1;
     if (prevSongIdx < 0) {
       this.pauseAudio();
+      window.audio.removeEventListener('loadedmetadata', this.playAudio);
       this.props.fetchCurrentSong(this.props.currentUserId, songQueue[songQueue.length + prevSongIdx]);
     } else if (prevSongIdx >= 0 && prevSongIdx < songQueue.length) {
       this.pauseAudio();
+      window.audio.removeEventListener('loadedmetadata', this.playAudio);
       this.props.fetchCurrentSong(this.props.currentUserId, songQueue[prevSongIdx]);
     }
     window.audio.src = this.props.currentSong.song.songUrl;
-    this.props.receivePlay(true, false);
+    this.props.receivePlay(true, false, this.props.currentSong.song.title);
   }
 
   skipToNextSong() {
@@ -303,13 +339,15 @@ export default class Playbar extends React.Component {
     nextSongIdx = songQueue.indexOf(this.props.currentSong.song.id) + 1;
     if (nextSongIdx > songQueue.length - 1) {
       this.pauseAudio();
+      window.audio.removeEventListener('loadedmetadata', this.playAudio);
       this.props.fetchCurrentSong(this.props.currentUserId, songQueue[nextSongIdx - songQueue.length]);
     } else if (nextSongIdx > 0 && nextSongIdx < songQueue.length) {
       this.pauseAudio();
+      window.audio.removeEventListener('loadedmetadata', this.playAudio);
       this.props.fetchCurrentSong(this.props.currentUserId, songQueue[nextSongIdx]);
     }
     window.audio.src = this.props.currentSong.song.songUrl;
-    this.props.receivePlay(true, false);
+    this.props.receivePlay(true, false, this.props.currentSong.song.title);
   }
 
   render() {
@@ -411,8 +449,8 @@ export default class Playbar extends React.Component {
                     </Link>
                   </div>
                 </div>
-                <button className="current-song-heart-icon" onMouseEnter={this.handleMouseOver("mouseHeartOver")} onMouseLeave={this.handleMouseOver("mouseHeartOver")}>
-                  <img src={this.state.mouseHeartOver ? window.heartIcon : window.heartGrayIcon} />
+                <button className={`current-song-heart-icon ${this.props.currentSong.song ? '' : 'invisible'}`} onClick={this.handleLikeSongClick.bind(this)} onMouseEnter={this.handleMouseOver("mouseHeartOver")} onMouseLeave={this.handleMouseOver("mouseHeartOver")}>
+                  <img src={this.state.mouseHeartOver ? (this.props.currentSongLikeStatus ? window.heartFilledIcon : window.heartIcon) : (this.props.currentSongLikeStatus ? window.heartFilledIcon : window.heartGrayIcon)} />
                 </button>
               </div>
             </div>
@@ -436,11 +474,11 @@ export default class Playbar extends React.Component {
                   </button>
                 </div>
                 <div className="player-controls-playbar">
-                  <div className="player-controls-playbar-progress-time">{this.state.currentTime ? this.state.currentTime : "0:00"}</div>
+                  <div className="player-controls-playbar-progress-time">{this.state.currentTime ? this.state.currentTime : ""}</div>
                   <div className="progress-bar" onClick={this.mouseMove} onMouseEnter={this.handleMouseOver("mouseProgressBarOver")} onMouseLeave={this.handleMouseOver("mouseProgressBarOver")}>
                     {progressBarDuration}
                   </div>
-                  <div className="play-controls-playbar-duration">{this.state.duration ? this.state.duration : '2:45'}</div>
+                  <div className="play-controls-playbar-duration">{this.state.duration ? (this.state.duration) : ''}</div>
                 </div>
               </div>
             </div>

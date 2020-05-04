@@ -14,10 +14,13 @@ export const RECEIVE_SHUFFLE = "RECEIVE_SHUFFLE";
 export const RECEIVE_REPEAT = "RECEIVE_REPEAT";
 export const RECEIVE_LIKE_SONG = "RECEIVE_LIKE_SONG";
 export const RECEIVE_SONG_QUEUE_CLICK = "RECEIVE_SONG_QUEUE_CLICK";
+export const RECEIVE_CURRENT_SONG_LIKED = 'RECEIVE_CURRENT_SONG_LIKED';
 
 
 export const createPlaylistSong = (playlist_id, song_id) => dispatch => {
-  return PlaylistSongApiUtil.createPlaylistSong({playlist_id, song_id}).then( response => console.log(response), err => (dispatch(receiveErrors(err.responseJSON))) );
+  return PlaylistSongApiUtil.createPlaylistSong({playlist_id, song_id});
+  
+  // .then( response => console.log(response), err => (dispatch(receiveErrors(err.responseJSON))) );
 }
 
 export const deletePlaylistSong = (id) => dispatch => {
@@ -47,12 +50,19 @@ export const searchSong = (str, queue) => dispatch => {
   });
 };
 
+export const receiveCurrentSongLikeStatus = likeStatus => {
+  return {
+    type: RECEIVE_CURRENT_SONG_LIKED,
+    likeStatus
+  };
+};
+
 export const receiveSongQueueClick = clicked => {
   return {
     type: RECEIVE_SONG_QUEUE_CLICK,
     clicked
-  }
-}
+  };
+};
 
 export const receiveClickedSongId = (id, playlistSongId) => {
   return {
@@ -83,13 +93,14 @@ export const receiveCurrentSong = (song) => {
   };
 };
 
-export const receivePlay = (playing, pause) => {
+export const receivePlay = (playing, pause, requestedSong) => {
   return {
     type: RECEIVE_PLAY,
     playing,
-    pause
-  }
-}
+    pause,
+    requestedSong
+  };
+};
 
 export const receiveSongQueue = (songQueue)=> {
   return {

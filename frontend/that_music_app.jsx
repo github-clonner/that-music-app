@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
         users: { [window.currentUser.id]: window.currentUser }
       },
       session: { currentUserId: window.currentUser.id },
-      currentSong: window.currentSong,
+      currentSong: Object.assign({}, window.currentSong, { likeStatus: window.currentSong.song ? window.currentUser.likeSongIds.includes(parseInt(window.currentSong.song.id)) : false}),
       playStatus: { playing: false, pause: true },
       songQueue: songQueueArr,
       currentPlayingPage: Object.values(window.recentlyVisited)
@@ -25,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     store = configureStore();
   }
-
   const root = document.getElementById('root');
   window.createPlaylist = createPlaylist;
   window.fetchPlaylist = fetchPlaylist;

@@ -8,7 +8,8 @@ import {
   receiveSongQueue,
   receiveClickedSongId,
   deletePlaylistSong,
-  createLikeSong
+  createLikeSong,
+  receiveCurrentSongLikeStatus
 } from '../actions/song_actions';
 import {fetchCurrentPlaylists, removePlaylists} from '../actions/playlist_actions';
 import {receiveDropdownControl} from '../actions/dropdown_actions';
@@ -28,15 +29,17 @@ const mapStateToProps = (state, {match}) => {
     currentPlaylists: state.currentPlaylists,
     playing: state.playStatus.playing,
     pause: state.playStatus.pause,
-    currentPlayingPage: state.currentPlayingPage
+    currentPlayingPage: state.currentPlayingPage,
+    currentUser: state.entities.users[state.session.currentUserId]
   };
 };
 
 const mapDispatchToProps = dispatch => {
   return {
+    receiveCurrentSongLikeStatus: likeStatus => dispatch(receiveCurrentSongLikeStatus(likeStatus)),
     fetchPlaylist: id => dispatch(fetchPlaylist(id)),
     fetchCurrentSong: (currentUserId, id) => dispatch(fetchCurrentSong(currentUserId, id)),
-    receivePlay: (playing, pause) => dispatch(receivePlay(playing, pause)),
+    receivePlay: (playing, pause, requestedSong) => dispatch(receivePlay(playing, pause, requestedSong)),
     fetchCurrentPlaylists: id => dispatch(fetchCurrentPlaylists(id)),
     receiveDropdownControl: pressed => dispatch(receiveDropdownControl(pressed)),
     receiveSongQueue: songQueue => dispatch(receiveSongQueue(songQueue)),

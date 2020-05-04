@@ -10,8 +10,9 @@ import { fetchLikeSongs,
   receiveClickedSongId,
   deletePlaylistSong,
   createLikeSong,
-  deleteLikeSong } from '../actions/song_actions';
-import { Link } from 'react-router-dom';
+  deleteLikeSong,
+  receiveCurrentSongLikeStatus } from '../actions/song_actions';
+import { Link, withRouter } from 'react-router-dom';
 import { ContextMenu, MenuItem, ContextMenuTrigger, handleContextClick } from 'react-contextmenu';
 
 import {fetchPlaylist, deletePlaylist, fetchCurrentPlaylists, removePlaylists} from '../actions/playlist_actions';
@@ -52,7 +53,7 @@ class CollectionFavoriteSongs extends React.Component {
     return (e) => {
       this.setState({ playing: !this.props.playing, pause: !this.props.pause});
       this.props.fetchCurrentSong(this.props.currentUserId, song.id);
-      this.props.receivePlay(true, false);
+      this.props.receivePlay(true, false, song.title);
     };
   }
 
@@ -79,7 +80,7 @@ class CollectionFavoriteSongs extends React.Component {
     return (e) => {
       this.setState({ playing: !this.props.playing, pause: !this.props.pause});
       this.props.fetchCurrentSong(this.props.currentUserId, song.id);
-      this.props.receivePlay(true, false);
+      this.props.receivePlay(true, false, song.title);
       if (this.props.songQueue[0] !== Object.values(this.props.songs)[0]) {
         this.props.receiveSongQueue(Object.values(this.props.songs).map(song => song.id));
       }
@@ -99,10 +100,16 @@ class CollectionFavoriteSongs extends React.Component {
     } else if (this.state.actionPlaylist === "Save to your Favorite Songs") {
       this.setState({actionPlaylist: false});
       this.props.createLikeSong(this.props.currentUserId, this.props.clickedSongId.id);
+      this.props.receiveCurrentSongLikeStatus(true);
     } else if (this.state.actionPlaylist === "Remove from your Favorite Songs") {
       let likeSongId = this.props.currentUser.likeSongs.filter(song => song.song_id === parseInt(this.props.clickedSongId.id))[0].id;
       this.setState({actionPlaylist: false});
-      this.props.deleteLikeSong(likeSongId).then( () => this.props.fetchLikeSongs(this.props.currentUserId));
+      this.props.deleteLikeSong(likeSongId).then( () => {
+        this.props.fetchLikeSongs(this.props.currentUserId);
+        if (this.props.currentSong.song && this.props.currentSong.song.id === this.props.clickedSongId.id) {
+          this.props.receiveCurrentSongLikeStatus(false);
+        }
+      });
     }
   }
 
@@ -176,7 +183,7 @@ class CollectionFavoriteSongs extends React.Component {
     }
 
     let renderSongs;
-    if (this.props.songs) {
+    if (Object.values(this.props.songs).length !== 0) {
       renderSongs = Object.values(this.props.songs).map( (song, idx) => {
 
         let explicit;
@@ -193,7 +200,7 @@ class CollectionFavoriteSongs extends React.Component {
           <li key={idx}
             ref={songRow => this.songRow = songRow}
             className="track-list-row"
-            onClick={this.handleClick(song)}
+            onDoubleClick={this.handleClick(song)}
             onMouseEnter={this.handleMouseEnter(idx)}
             onMouseLeave={this.handleMouseLeave.bind(this)}>
 
@@ -221,11 +228,11 @@ class CollectionFavoriteSongs extends React.Component {
                   <div className="display-flex">
                     {explicit}
                     <span className="ellipsis-one-line">
-                      <Link to={`/app/artist/${song.artistId}`}>{song.artist}</Link>
+                      <Link to={`/app/artist/${song.artistId}/overview`}>{song.artist}</Link>
                     </span>
                     <span className="second-line-separator">•</span>
                     <span className="ellipsis-one-line">
-                      <Link to={`/app/artist/${song.albumId}`}>{song.album}</Link>
+                      <Link to={`/app/album/${song.albumId}`}>{song.album}</Link>
                     </span>
                   </div>
               </div>
@@ -246,7 +253,22 @@ class CollectionFavoriteSongs extends React.Component {
           </li>
         );
       });
-    }
+    } else {
+      renderSongs = (
+        <section className="empty-state-message container-fluid empty">
+          <div className="row">
+            <div className="empty-state-message-margin">
+              <div className="empty-state-icon-wrapper">
+                <svg className="empty-state-icon" width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><title>Add Song Icon</title><path d="M26 0C11.64 0 0 11.643 0 26c0 14.36 11.64 26 26 26s26-11.64 26-26S40.36 0 26 0zm0 50C12.767 50 2 39.234 2 26S12.767 2 26 2c13.234 0 24 10.766 24 24S39.234 50 26 50zm0-32c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.58-8-8-8zm0 14c-3.308 0-6-2.69-6-6s2.692-6 6-6 6 2.69 6 6-2.69 6-6 6z" fill="currentColor" fillRule="evenodd"></path></svg>              
+              </div>
+              <h1 className="empty-state-title">Songs you’ve liked live here</h1>
+              <h4 className="empty-state-subtitle">Find more of the songs you love in Browse and save to your Favorite Songs.</h4>
+              <Link className="white-button" to="/app/browse/newreleases">DISCOVER</Link>
+            </div>
+          </div>
+        </section>
+      );
+    };
 
     return (
       <div className="browse-newreleases-container">
@@ -275,7 +297,8 @@ const mapStateToProps = state => {
     playing: state.playStatus.playing,
     pause: state.playStatus.pause,
     songQueue: state.songQueue,
-    clickedSongId: state.clickedSongId
+    clickedSongId: state.clickedSongId,
+    currentSongLikeStatus: state.currentSong.likeStatus
   };
 };
 
@@ -283,7 +306,7 @@ const mapDispatchToProps = dispatch => {
   return {
     fetchLikeSongs: id => dispatch(fetchLikeSongs(id)),
     fetchCurrentSong: (userId, id) => dispatch(fetchCurrentSong(userId, id)),
-    receivePlay: (playing, pause) => dispatch(receivePlay(playing, pause)),
+    receivePlay: (playing, pause, requestedSong) => dispatch(receivePlay(playing, pause, requestedSong)),
     fetchPlaylist: id => dispatch(fetchPlaylist(id)),
     fetchCurrentPlaylists: id => dispatch(fetchCurrentPlaylists(id)),
     receiveSongQueue: songQueue => dispatch(receiveSongQueue(songQueue)),
@@ -292,8 +315,9 @@ const mapDispatchToProps = dispatch => {
     deletePlaylistSong: (id) => dispatch(deletePlaylistSong(id)),
     deletePlaylist: (id) => dispatch(deletePlaylist(id)),
     createLikeSong: (userId, songId) => dispatch(createLikeSong(userId, songId)),
-    deleteLikeSong: id => dispatch(deleteLikeSong(id))
+    deleteLikeSong: id => dispatch(deleteLikeSong(id)),
+    receiveCurrentSongLikeStatus: likeStatus => dispatch(receiveCurrentSongLikeStatus(likeStatus))
   };
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(CollectionFavoriteSongs);
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(CollectionFavoriteSongs));

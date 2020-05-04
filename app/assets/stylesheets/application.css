@@ -69,6 +69,7 @@ section {
   border: 0;
   vertical-align: baseline;
   display: block;
+  height: 100%;
 }
 
 .artist-header {
@@ -298,6 +299,26 @@ section {
   padding: 0;
   max-width: 26.875em;
   margin: 0 auto;
+}
+
+.demo-button {
+  margin-top: 16px;
+  background-color: #1db954;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 500px;
+  padding: 16px 48px 18px;
+  transition-property: background-color;
+  transition-duration: .3s;
+  border-width: 0;
+  letter-spacing: 2px;
+  min-width: 160px;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.demo-button:hover {
+  background-color: #1ED760;
 }
 
 .demo-login-container {
@@ -768,6 +789,15 @@ text-align: center;
   margin-bottom: 36px;
 }
 
+.empty-search-title {
+  font-size: 28px;
+  line-height: 36px;
+  letter-spacing: -.005em;
+  font-weight: 600;
+  color: #FFF;
+  text-align: center;
+}
+
 .white-button {
   margin-top: 36px;
   background: #FFF;
@@ -810,6 +840,15 @@ text-align: center;
   letter-spacing: .015em;
   font-weight: 200;
   color: #b3b3b3;
+}
+
+.empty-search-subtitle {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: .015em;
+  font-weight: 200;
+  color: #b3b3b3;
+  padding-top: 10px;
 }
 
 .empty-state-icon-wrapper {
@@ -1070,7 +1109,7 @@ text-align: center;
 }
 
 .browse-featured-playlist-lists {
-  display: flex;
+  /* display: flex; */
   flex-wrap: wrap;
   flex-direction: row;
   width: 100%;
@@ -1258,6 +1297,7 @@ text-align: center;
   margin-bottom: 15px;
   width: 100%;
   text-align: center;
+  /* cursor: pointer; */
 }
 
 .track-list-header-play-button {
@@ -1275,6 +1315,7 @@ text-align: center;
   transition: none 33ms cubic-bezier(.3,0,0,1);
   transition-duration: 50ms;
   transition-property: background-color;
+  cursor: pointer;
 }
 
 .track-list-header-play-button:hover {
@@ -1308,6 +1349,7 @@ text-align: center;
   margin-top: 30px;
   transition-duration: 66ms;
   transition-property: all;
+  cursor: pointer;
 }
 
 .track-list-header-body-three-dots-buttons-body {
@@ -1315,6 +1357,7 @@ text-align: center;
   margin-top: 30px;
   transition-duration: 66ms;
   transition-property: all;
+  cursor: pointer;
 }
 
 
@@ -1343,7 +1386,7 @@ text-align: center;
   border-radius: 500px;
   padding: 13px;
   vertical-align: middle;
-
+  cursor: pointer;
 }
 
 .btn-margin-right {
@@ -1380,6 +1423,7 @@ text-align: center;
   transition-timing-function: linear;
   transition-duration: .2s;
   transition-property: background-color;
+  cursor: pointer;
 }
 
 .track-list-row:hover {
@@ -1621,6 +1665,7 @@ text-align: center;
 
 .current-song-heart-icon {
   padding: 10px;
+  cursor: pointer;
 }
 
 .play-bar-center {
@@ -1648,6 +1693,7 @@ text-align: center;
 .player-controls-play-button img{
   height: 50px;
   width: 50px;
+  cursor: pointer;
 }
 
 .player-controls-play-button img:hover{
@@ -1657,16 +1703,19 @@ text-align: center;
 .player-controls-previous-next-button img{
   height: 16px;
   width: 16px;
+  cursor: pointer;
 }
 
 .player-controls-shuffle-button img {
   height: 26px;
   width: 26px;
+  cursor: pointer;
 }
 
 .player-controls-repeat-button img {
   height: 22px;
   width: 22px;
+  cursor: pointer;
 }
 
 .player-controls-playbar {
@@ -1675,6 +1724,7 @@ text-align: center;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  cursor: pointer;
 }
 
 .player-controls-playbar-progress-time {
@@ -1685,6 +1735,7 @@ text-align: center;
   text-align: center;
   color: #b3b3b3;
   font-weight: lighter;
+  cursor: pointer;
 }
 
 .progress-bar {
@@ -1762,6 +1813,7 @@ text-align: center;
 
 .queue-button {
   padding: 0 5px;
+  cursor: pointer;
 }
 
 .queue-button img {
@@ -1787,6 +1839,7 @@ text-align: center;
 .volume-progress-bar-container {
   height: 12px;
   width: 100%;
+  cursor: pointer;
 
 }
 
@@ -1986,6 +2039,7 @@ text-align: center;
   border-radius: 500px;
   min-width: 130px;
   line-height: 1.6;
+  cursor: pointer;
 }
 
 .input-box-button-black {
@@ -2128,6 +2182,14 @@ text-align: center;
 }
 
 @media screen and (min-width: 992px) {
+  .splash-cover {
+    width: 1610px;
+    height: 1523px;
+    background: url(https://www.scdn.co/i/home/hero-burst.svg) no-repeat;
+    background-position: top -410px center;
+    transform: translate(-50%, 0%);
+  }
+
   .navbar-semi-transparent {
     background-color: rgba(0, 0, 0, 0.6);
   }
@@ -2135,6 +2197,7 @@ text-align: center;
   .navbar {
     min-height: 80px;
     margin-bottom: 0;
+    z-index: 10;
   }
 
   .cover-container {
@@ -2149,6 +2212,10 @@ text-align: center;
   .navbar-toggle {
     display: none;
   }
+
+  .invisible {
+      display: none;
+    }
 
   .navbar-collapse {
     margin-right: 0;
@@ -2204,10 +2271,6 @@ text-align: center;
     transform: translateY(50%);
   }
 
-  .navbar-toggle {
-    display: none;
-  }
-
   .close-button {
     display: none;
   }
@@ -2219,6 +2282,10 @@ text-align: center;
 
   .row-simplified h1{
     font-size: 80px;
+  }
+
+  .larger-greeting {
+    display: none;
   }
 
 }
@@ -2279,14 +2346,14 @@ text-align: center;
   }
 
   .playlist-cover-img {
-    height: 30%;
+    /* height: 30%; */
     width: 30%;
     min-width: 157px;
     position: relative;
   }
 
   .wrapper {
-    height: 10%;
+    height: 100%;
     width: 10%;
     min-width: 157px;
     position: relative;
@@ -2351,6 +2418,10 @@ text-align: center;
     margin-top: 0;
   }
 
+  .invisible {
+    display: none;
+  }
+
 }
 
 
@@ -2368,8 +2439,17 @@ text-align: center;
 
 
 @media screen and (max-width: 991px) {
+
+  .splash-cover {
+    width: 878px;
+    height: 676px;
+    background: url(https://www.scdn.co/i/home/hero-burst-mobile.svg) no-repeat;
+    transform: translate(-50%, 10%);
+  }
+
   .navbar-default {
     background-color: #000;
+    z-index: 10;
   }
 
   .navbar {
@@ -2479,6 +2559,10 @@ text-align: center;
   .close {
     transform: translateX(100%);
     transition: all 0.3s linear;
+  }
+
+  .greetings {
+    display: none;
   }
 }
 

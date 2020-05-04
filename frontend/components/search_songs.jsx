@@ -6,7 +6,9 @@ import {
   fetchCurrentSong,
   receiveSongQueue,
   createLikeSong,
-  receivePlay } from '../actions/song_actions';
+  receivePlay,
+  receiveCurrentSongLikeStatus  } from '../actions/song_actions';
+import { createCurrentlyVisited } from '../actions/session_actions';
 import { fetchCurrentPlaylists } from '../actions/playlist_actions';
 import { ContextMenu, MenuItem, ContextMenuTrigger, handleContextClick } from 'react-contextmenu';
 import { openModal } from '../actions/modal_actions';
@@ -54,7 +56,8 @@ class SearchResults extends React.Component {
     return (e) => {
       that.setState({ playing: !that.props.playing, pause: !that.props.pause});
       that.props.fetchCurrentSong(that.props.currentUserId, song.id);
-      that.props.receivePlay(true, false);
+      that.props.receivePlay(true, false, song.title);
+      that.props.createCurrentlyVisited(that.props.currentUserId, song.albumId, 'album', song.album, null, null, song.albumCover);
       if (that.props.songQueue[0] !== Object.values(that.props.songs)[0]) {
         that.props.receiveSongQueue(Object.values(that.props.songs).map(song => song.id));
       }
@@ -63,14 +66,15 @@ class SearchResults extends React.Component {
 
   componentDidUpdate() {
     if(this.state.actionPlaylist === 'Save to your Favorite Songs') {
-      // debugger
       this.setState({actionPlaylist: false});
       this.props.createLikeSong(this.props.currentUserId, this.props.clickedSongId.id);
+      if (this.props.currentSong.song && this.props.clickedSongId.id === this.props.currentSong.song.id) {
+        this.props.receiveCurrentSongLikeStatus(true);
+      }
     }
   }
 
   handleContextMenuClick(e, data) {
-    // debugger
     this.setState({actionPlaylist: data.foo});
     if (data.foo === "Add to Playlist") {
       this.props.openModal();
@@ -163,31 +167,27 @@ class SearchResults extends React.Component {
           <li key={idx}
             ref={songRow => this.songRow = songRow}
             className="track-list-row fewer-padding"
-            onClick={this.handleClick(song)}
+            onDoubleClick={this.handleClick(song)}
             onMouseEnter={this.handleMouseEnter(idx)}
             onMouseLeave={this.handleMouseLeave.bind(this)}>
 
             {
               Object.values(this.props.currentSong).length !== 0
               ? (this.state.idxMouseOver === idx
-                ? (song.id === this.props.currentSong.song.id
+                ? (this.props.currentSong.song && song.id === this.props.currentSong.song.id
                   ? renderPlayNeon : renderPlay)
-                  : (song.id === this.props.currentSong.song.id
+                  : (this.props.currentSong.song && song.id === this.props.currentSong.song.id
                     ? renderNoteNeon
                     : renderNote))
               : (this.state.idxMouseOver === idx ? renderPlay : renderNote)
             }
-
-            <div className="album-cover-padding">
-               <img src={song.albumCover} />
-             </div>
 
             <div className="track-list-column">
               <div className="track-list-column-margin">
                 <div className=
                   {
                     Object.values(this.props.currentSong).length !== 0
-                    ? (song.id === this.props.currentSong.song.id
+                    ? (this.props.currentSong.song && song.id === this.props.currentSong.song.id
                       ? "track-list-name-neon"
                       : "track-list-name")
                     : "track-list-name"
@@ -195,11 +195,11 @@ class SearchResults extends React.Component {
                   <div className="display-flex">
                     {explicit}
                     <span className="ellipsis-one-line">
-                      <Link to={`/app/artist/${song.artistId}`}>{song.artist}</Link>
+                      <Link to={`/app/artist/${song.artistId}/overview`}>{song.artist}</Link>
                     </span>
                     <span className="second-line-separator">•</span>
                     <span className="ellipsis-one-line">
-                      <Link to={`/app/artist/${song.albumId}`}>{song.album}</Link>
+                      <Link to={`/app/album/${song.albumId}`}>{song.album}</Link>
                     </span>
                   </div>
               </div>
@@ -209,7 +209,7 @@ class SearchResults extends React.Component {
               <div className=
                 {
                   Object.values(this.props.currentSong).length !== 0
-                  ? (song.id === this.props.currentSong.song.id
+                  ? (this.props.currentSong.song && song.id === this.props.currentSong.song.id
                     ? "track-list-duration-margin-top-neon"
                     : "track-list-duration-margin-top")
                   : "track-list-duration-margin-top"
@@ -288,7 +288,7 @@ class SearchResults extends React.Component {
           <MenuItem data={{foo: 'Add to Playlist'}} onClick={this.handleContextMenuClick.bind(this)}>
             Add to Playlist
           </MenuItem>
-          <MenuItem data={{foo: 'Save to your Favorite Songs'}} onClick={this.handleContextMenuClick.bind(this)}>
+          <MenuItem data={{foo: this.props.clickedSongId && this.props.currentUser.likeSongIds.includes(this.props.clickedSongId.id) ? '' : `Save to your Favorite Songs`}} onClick={this.handleContextMenuClick.bind(this)}>
             Save to your Favorite Songs
           </MenuItem>
         </ContextMenu>
@@ -304,6 +304,7 @@ const mapStateToProps = (state, ownProps) => {
     currentSong: state.currentSong,
     queries: ownProps.queries,
     currentUserId: state.session.currentUserId,
+    currentUser: state.entities.users[state.session.currentUserId],
     songQueue: state.songQueue,
     clickedSongId: state.clickedSongId
   };
@@ -311,15 +312,16 @@ const mapStateToProps = (state, ownProps) => {
 
 const mapDispatchToProps = dispatch => {
   return {
-
     fetchCurrentSong: (currentUserId, id) => dispatch(fetchCurrentSong(currentUserId, id)),
-    receivePlay: (playing, pause) => dispatch(receivePlay(playing, pause)),
+    receivePlay: (playing, pause, requestedSong) => dispatch(receivePlay(playing, pause, requestedSong)),
     receiveSongQueue: songQueue => dispatch(receiveSongQueue(songQueue)),
     fetchCurrentPlaylists: id => dispatch(fetchCurrentPlaylists(id)),
     receiveClickedSongId: id => dispatch(receiveClickedSongId(id)),
     createPlaylistSong: (playlist_id, song_id) => dispatch(createPlaylistSong(playlist_id, song_id)),
     createLikeSong: (userId, songId) => dispatch(createLikeSong(userId, songId)),
-    openModal: () => dispatch(openModal())
+    openModal: () => dispatch(openModal()),
+    receiveCurrentSongLikeStatus: likeStatus => dispatch(receiveCurrentSongLikeStatus(likeStatus)),
+    createCurrentlyVisited: (user_id, table_id, table, title, imageUrl, thumbImage, coverImage) => dispatch(createCurrentlyVisited(user_id, table_id, table, title, imageUrl, thumbImage, coverImage))
   };
 };
 
